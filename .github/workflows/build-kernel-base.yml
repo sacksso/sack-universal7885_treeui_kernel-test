@@ -80,7 +80,6 @@ jobs:
           else
             echo "⚠️  La línea CONFIG_SECURITY_SELINUX_NEVER_ENFORCE no se encontró; puede que ya esté desactivada."
           fi
-          # Verificamos el cambio
           grep -E "(CONFIG_SECURITY_SELINUX_NEVER_ENFORCE|# CONFIG_SECURITY_SELINUX_NEVER_ENFORCE)" "$DEFCONFIG" || echo "No se encontró la línea (ya eliminada)."
 
       # ============================================================
