@@ -1,4 +1,4 @@
-name: Build Kernel for a7y18lte (LineageOS 18.1) - SELinux Enforcing (v1.1)
+name: Build Kernel for a7y18lte (LineageOS 18.1) - SELinux Permissive (v1.0)
 
 on:
   workflow_dispatch:
@@ -66,24 +66,7 @@ jobs:
           drivers/net/wireless/scsc/nl80211_vendor.c
 
       # ============================================================
-      # MODIFICACIÓN DEL DEFCONFIG PARA SELINUX ENFORCING
-      # Comentamos la línea que fuerza Permissive
-      # ============================================================
-
-      - name: Disable CONFIG_SECURITY_SELINUX_NEVER_ENFORCE
-        working-directory: kernel
-        run: |
-          DEFCONFIG=arch/arm64/configs/lineage_a7y18lte_defconfig
-          if grep -q "CONFIG_SECURITY_SELINUX_NEVER_ENFORCE=y" "$DEFCONFIG"; then
-            sed -i 's/^CONFIG_SECURITY_SELINUX_NEVER_ENFORCE=y/# CONFIG_SECURITY_SELINUX_NEVER_ENFORCE is not set/' "$DEFCONFIG"
-            echo "✅ SELinux NEVER_ENFORCE desactivado en el defconfig."
-          else
-            echo "⚠️  La línea CONFIG_SECURITY_SELINUX_NEVER_ENFORCE no se encontró; puede que ya esté desactivada."
-          fi
-          grep -E "(CONFIG_SECURITY_SELINUX_NEVER_ENFORCE|# CONFIG_SECURITY_SELINUX_NEVER_ENFORCE)" "$DEFCONFIG" || echo "No se encontró la línea (ya eliminada)."
-
-      # ============================================================
-      # COMPILACIÓN (usando el defconfig ya modificado)
+      # COMPILACIÓN (sin modificar SELinux, manteniendo Permissive)
       # ============================================================
 
       - name: Compile kernel
@@ -131,7 +114,7 @@ jobs:
         run: |
           cat > anykernel3/build-info.txt <<EOF
           ========================================
-          a7y18lte KERNEL v1.1 - SELinux Enforcing
+          a7y18lte KERNEL v1.0 (SELinux Permissive)
           ========================================
           Device: Samsung Galaxy A7 2018 (a7y18lte)
           Model: SM-A750F/FN/G
@@ -140,13 +123,11 @@ jobs:
           Build Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
           Commit: $(git --git-dir=kernel/.git rev-parse --short HEAD 2>/dev/null || echo "unknown")
           ========================================
-          Cambios respecto a v1.0 (BASE):
-            - Desactivada CONFIG_SECURITY_SELINUX_NEVER_ENFORCE
-            - SELinux ahora respeta el cmdline (enforcing)
-            - Modo Enforcing activo tras flashear
+          SELinux: Permissive (como TreeUI original)
+          Sin overclock. Build de referencia estable.
           ========================================
           Este ZIP contiene:
-            - Kernel Image con SELinux Enforcing
+            - Kernel Image con SELinux Permissive
             - Instalador AnyKernel3
             - Para instalar vía TWRP/OrangeFox
           ========================================
@@ -156,14 +137,14 @@ jobs:
       - name: Create flashable ZIP
         run: |
           cd anykernel3
-          zip -r9 ../a7y18lte-v1.1-SELinux-Enforcing.zip . -x "*.git*"
+          zip -r9 ../a7y18lte-v1.0-SELinux-Permissive.zip . -x "*.git*"
           cd ..
           echo "ZIP creado correctamente"
-          ls -lh a7y18lte-v1.1-SELinux-Enforcing.zip
+          ls -lh a7y18lte-v1.0-SELinux-Permissive.zip
 
       - name: Upload final ZIP artifact
         uses: actions/upload-artifact@v4
         with:
-          name: a7y18lte-v1.1-SELinux-Enforcing
-          path: a7y18lte-v1.1-SELinux-Enforcing.zip
+          name: a7y18lte-v1.0-SELinux-Permissive
+          path: a7y18lte-v1.0-SELinux-Permissive.zip
           if-no-files-found: error
