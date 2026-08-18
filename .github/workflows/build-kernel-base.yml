@@ -1,4 +1,4 @@
-name: Build Kernel for a7y18lte (LineageOS 18.1) - Base + AnyKernel3
+name: Build Kernel for a7y18lte (LineageOS 18.1) - SELinux Enforcing (v1.1)
 
 on:
   workflow_dispatch:
@@ -41,8 +41,7 @@ jobs:
             gcc-arm-linux-gnueabi
 
       # ============================================================
-      # FIXES DE COMPILACIÓN (necesarios con este toolchain/gcc,
-      # NO son parte del overclock — se mantienen en la base)
+      # FIXES DE COMPILACIÓN (necesarios con este toolchain/gcc)
       # ============================================================
 
       - name: Fix decon_clocks_table
@@ -67,7 +66,25 @@ jobs:
           drivers/net/wireless/scsc/nl80211_vendor.c
 
       # ============================================================
-      # COMPILACIÓN (stock defconfig, sin overclock)
+      # MODIFICACIÓN DEL DEFCONFIG PARA SELINUX ENFORCING
+      # Comentamos la línea que fuerza Permissive
+      # ============================================================
+
+      - name: Disable CONFIG_SECURITY_SELINUX_NEVER_ENFORCE
+        working-directory: kernel
+        run: |
+          DEFCONFIG=arch/arm64/configs/lineage_a7y18lte_defconfig
+          if grep -q "CONFIG_SECURITY_SELINUX_NEVER_ENFORCE=y" "$DEFCONFIG"; then
+            sed -i 's/^CONFIG_SECURITY_SELINUX_NEVER_ENFORCE=y/# CONFIG_SECURITY_SELINUX_NEVER_ENFORCE is not set/' "$DEFCONFIG"
+            echo "✅ SELinux NEVER_ENFORCE desactivado en el defconfig."
+          else
+            echo "⚠️  La línea CONFIG_SECURITY_SELINUX_NEVER_ENFORCE no se encontró; puede que ya esté desactivada."
+          fi
+          # Verificamos el cambio
+          grep -E "(CONFIG_SECURITY_SELINUX_NEVER_ENFORCE|# CONFIG_SECURITY_SELINUX_NEVER_ENFORCE)" "$DEFCONFIG" || echo "No se encontró la línea (ya eliminada)."
+
+      # ============================================================
+      # COMPILACIÓN (usando el defconfig ya modificado)
       # ============================================================
 
       - name: Compile kernel
@@ -115,7 +132,7 @@ jobs:
         run: |
           cat > anykernel3/build-info.txt <<EOF
           ========================================
-          a7y18lte BASE Kernel Build Information
+          a7y18lte KERNEL v1.1 - SELinux Enforcing
           ========================================
           Device: Samsung Galaxy A7 2018 (a7y18lte)
           Model: SM-A750F/FN/G
@@ -124,13 +141,15 @@ jobs:
           Build Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
           Commit: $(git --git-dir=kernel/.git rev-parse --short HEAD 2>/dev/null || echo "unknown")
           ========================================
-          Sin overclock de CPU/GPU. Build de referencia
-          estable para comparar contra futuras modificaciones.
+          Cambios respecto a v1.0 (BASE):
+            - Desactivada CONFIG_SECURITY_SELINUX_NEVER_ENFORCE
+            - SELinux ahora respeta el cmdline (enforcing)
+            - Modo Enforcing activo tras flashear
           ========================================
-          This ZIP contains:
-            - Stock patched kernel Image
-            - AnyKernel3 installer
-            - Suitable for TWRP installation
+          Este ZIP contiene:
+            - Kernel Image con SELinux Enforcing
+            - Instalador AnyKernel3
+            - Para instalar vía TWRP/OrangeFox
           ========================================
           EOF
           cat anykernel3/build-info.txt
@@ -138,14 +157,14 @@ jobs:
       - name: Create flashable ZIP
         run: |
           cd anykernel3
-          zip -r9 ../a7y18lte-BASE-Kernel.zip . -x "*.git*"
+          zip -r9 ../a7y18lte-v1.1-SELinux-Enforcing.zip . -x "*.git*"
           cd ..
           echo "ZIP creado correctamente"
-          ls -lh a7y18lte-BASE-Kernel.zip
+          ls -lh a7y18lte-v1.1-SELinux-Enforcing.zip
 
       - name: Upload final ZIP artifact
         uses: actions/upload-artifact@v4
         with:
-          name: a7y18lte-BASE-Kernel
-          path: a7y18lte-BASE-Kernel.zip
+          name: a7y18lte-v1.1-SELinux-Enforcing
+          path: a7y18lte-v1.1-SELinux-Enforcing.zip
           if-no-files-found: error
